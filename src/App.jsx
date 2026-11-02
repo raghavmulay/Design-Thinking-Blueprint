@@ -77,19 +77,19 @@ function AutoTextarea({ value, className, ...rest }) {
 
 const EXAMPLES = [
   {
-    label: "Library fines",
-    problem: "Students forget library book due-dates and receive avoidable fines.",
-    user: "Busy final-year engineering students managing several deadlines.",
+    label: "Attendance tracking",
+    problem: "Students struggle to track their attendance across multiple subjects and risk being detained.",
+    user: "Engineering students at VIT Pune managing 6+ subjects per semester.",
   },
   {
     label: "Canteen queues",
-    problem: "Students waste their short lunch break waiting in canteen queues.",
-    user: "Students with only 40 minutes between lectures.",
+    problem: "Students waste their short lunch break waiting in canteen queues and often skip meals.",
+    user: "Students with only 30–40 minutes between back-to-back lectures.",
   },
   {
-    label: "Lab equipment",
-    problem: "Students cannot see which shared lab equipment is available.",
-    user: "CS and AI students working on project assignments.",
+    label: "Assignment deadlines",
+    problem: "Students miss assignment submission deadlines because reminders are scattered across WhatsApp, email, and notice boards.",
+    user: "Second and third year engineering students juggling labs, projects, and coursework.",
   },
 ];
 
@@ -612,7 +612,7 @@ export default function App() {
           </div>
         )}
       </article></section>}
-      <footer>Blueprint Co-Pilot · Student project prototype</footer>
+      <footer>Blueprint Co-Pilot · Design Thinking &amp; Product Lifecycle Management · VIT Pune</footer>
       {result && (
         <div className="print-doc" aria-hidden="true">
           <h1 className="pd-title">Blueprint Co-Pilot</h1>
