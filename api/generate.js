@@ -444,7 +444,7 @@ ${context}`;
   // Groq model. openai/gpt-oss-20b is a current GroqCloud production model
   // that supports Structured Outputs with strict constrained decoding, so
   // the response is guaranteed to match the JSON schema above.
-  const MODEL = "llama3-70b-8192";
+  const MODEL = "openai/gpt-oss-20b";
 
   // Groq exposes an OpenAI-compatible Chat Completions API. The whole
   // instruction (`prompt`) is self-contained, so it goes in the user turn;
@@ -464,14 +464,6 @@ ${context}`;
     ],
     temperature: 0.7,
     max_tokens: 4096,
-    response_format: {
-      type: "json_schema",
-      json_schema: {
-        name: schemaName,
-        strict: true,
-        schema: responseSchema,
-      },
-    },
   };
 
   const url = "https://api.groq.com/openai/v1/chat/completions";
@@ -730,20 +722,72 @@ ${context}`;
     .replace(/```\s*$/i, "")
     .trim();
 
+  // Attempt to repair common model output issues: missing closing brackets/braces.
+  function repairJson(str) {
+    // Count unclosed brackets and braces, then append the missing closers.
+    let braces = 0, brackets = 0;
+    let inString = false, escape = false;
+    for (const ch of str) {
+      if (escape) { escape = false; continue; }
+      if (ch === "\\" && inString) { escape = true; continue; }
+      if (ch === '"') { inString = !inString; continue; }
+      if (inString) continue;
+      if (ch === "{") braces++;
+      else if (ch === "}") braces--;
+      else if (ch === "[") brackets++;
+      else if (ch === "]") brackets--;
+    }
+    let repaired = str;
+    while (brackets > 0) { repaired += "]"; brackets--; }
+    while (braces > 0) { repaired += "}"; braces--; }
+    return repaired;
+  }
+
   let result;
 
   try {
     result = JSON.parse(cleaned);
   } catch {
-    console.error(
-      "Groq output was not valid JSON:",
-      rawText
-    );
+    // First try bracket/brace repair for truncated output.
+    try {
+      result = JSON.parse(repairJson(cleaned));
+    } catch { /* fall through to section-specific rescue */ }
 
-    return res.status(502).json({
-      error:
-        "Groq returned an incomplete draft. Please retry.",
-    });
+    // The model sometimes emits experiment/mvp as top-level siblings of
+    // evidenceToMvp instead of nesting them inside it, producing two
+    // concatenated JSON objects that fail JSON.parse. Rescue by merging.
+    if (!result && section === "evidenceToMvp") {
+      try {
+        // Extract every {...} block at the top level and merge them.
+        const blocks = [];
+        let depth = 0, start = -1;
+        for (let i = 0; i < cleaned.length; i++) {
+          if (cleaned[i] === "{") { if (depth++ === 0) start = i; }
+          else if (cleaned[i] === "}") { if (--depth === 0 && start !== -1) { blocks.push(JSON.parse(cleaned.slice(start, i + 1))); start = -1; } }
+        }
+        if (blocks.length > 1) {
+          const merged = Object.assign({}, ...blocks);
+          // If experiment/mvp landed at top level, move them inside evidenceToMvp.
+          if (merged.evidenceToMvp && !merged.evidenceToMvp.experiment && merged.experiment) {
+            merged.evidenceToMvp.experiment = merged.experiment;
+            delete merged.experiment;
+          }
+          if (merged.evidenceToMvp && !merged.evidenceToMvp.mvp && merged.mvp) {
+            merged.evidenceToMvp.mvp = merged.mvp;
+            delete merged.mvp;
+          }
+          result = merged;
+        } else {
+          throw new Error("single block");
+        }
+      } catch {
+        console.error("Groq output was not valid JSON:", rawText);
+        return res.status(502).json({ error: "Groq returned an incomplete draft. Please retry." });
+      }
+    } else {
+      console.error("Groq output was not valid JSON:", rawText);
+      return res.status(502).json({ error: "Groq returned an incomplete draft. Please retry." });
+    }
   }
 
   // ---------------------------------------------------------
