@@ -62,6 +62,12 @@ Thumbs.db
 Desktop.ini
 
 # =========================
+# Local dev overrides
+# =========================
+*.local
+!.env.example
+
+# =========================
 # Visual Studio / Windows project files
 # =========================
 *.suo
