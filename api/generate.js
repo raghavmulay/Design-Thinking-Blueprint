@@ -444,7 +444,7 @@ ${context}`;
   // Groq model. openai/gpt-oss-20b is a current GroqCloud production model
   // that supports Structured Outputs with strict constrained decoding, so
   // the response is guaranteed to match the JSON schema above.
-  const MODEL = "openai/gpt-oss-20b";
+  const MODEL = "llama-3.3-70b-versatile";
 
   // Groq exposes an OpenAI-compatible Chat Completions API. The whole
   // instruction (`prompt`) is self-contained, so it goes in the user turn;

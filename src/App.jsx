@@ -133,6 +133,13 @@ function RegenButton({ section, label, loading, busy, dark, onClick }) {
 }
 
 export default function App() {
+  const [dark, setDark] = useState(() => localStorage.getItem("theme") === "dark");
+
+  useEffect(() => {
+    document.body.classList.toggle("dark", dark);
+    localStorage.setItem("theme", dark ? "dark" : "light");
+  }, [dark]);
+
   const [problem, setProblem] = useState("");
   const [targetUser, setTargetUser] = useState("");
   const [result, setResult] = useState(null);
@@ -480,7 +487,7 @@ export default function App() {
 
   return (
     <main className="page"><div className="container">
-      <header className="top"><div><div className="brand"><span>B</span> Blueprint Co-Pilot</div><p>Design Thinking Co-Pilot for Students</p></div><small>Live AI · Editable draft</small></header>
+      <header className="top"><div><div className="brand"><span>B</span> Blueprint Co-Pilot</div><p>Design Thinking Co-Pilot for Students</p></div><div className="top-right"><small>Live AI · Editable draft</small><button type="button" className="theme-toggle" onClick={() => setDark(d => !d)} aria-label="Toggle dark mode" title="Toggle dark mode">{dark ? "☀ Light" : "☾ Dark"}</button></div></header>
       <section className="hero"><p className="eyebrow">DESIGN THINKING COURSEWORK</p><h1>From a rough idea<br /><i>to a reviewable blueprint.</i></h1><p>Generate a structured first draft, then review and refine it yourself.</p></section>
       <section className="form-card"><div className="heading"><div><label>01</label><h2>Start with an idea</h2></div><em>Choose an example or write your own.</em></div><div className="examples">{EXAMPLES.map((example) => <button type="button" key={example.label} onClick={() => chooseExample(example)}>{example.label}</button>)}</div><div className="fields"><label>Problem / idea<textarea value={problem} onChange={(e) => setProblem(e.target.value)} placeholder="What problem are you trying to solve?" /></label><label>Target user<textarea value={targetUser} onChange={(e) => setTargetUser(e.target.value)} placeholder="Who experiences this problem?" /></label></div>{message && <p className={quotaExhausted ? "error error-quota" : "error"}>{message}</p>}<button type="button" className="generate" onClick={generate} disabled={status === "loading"}>{status === "loading" ? "Generating with AI..." : quotaExhausted ? "Try again (quota exhausted)" : status === "error" ? "Retry generation" : "Generate draft blueprint →"}</button></section>
       {status === "done" && result && <section id="results" className="results"><div className="result-heading"><div><label>02</label><h2>Draft blueprint</h2><p>AI-generated output. Treat it as a hypothesis, not validated research.</p></div><div className="actions"><button type="button" onClick={copySummary}>{copied ? "Copied" : "Copy summary"}</button><button type="button" onClick={exportPDF}>Export PDF</button><button type="button" onClick={newIdea}>New idea</button></div></div>{exportError && <p className="error">{exportError}</p>}<div className="input-summary"><b>Problem</b><span>{result.problem}</span><b>Target user</b><span>{result.targetUser}</span></div><div className="two"><article className={regenSection === "persona" ? "card regenerating" : "card"}><div className="card-head"><label>PERSONA · EDITABLE</label><RegenButton section="persona" label="Persona" loading={regenSection === "persona"} busy={regenSection !== null} onClick={regenerate} /></div>{regenError.persona && <p className="error">{regenError.persona}</p>}<input className="title-input" value={result.persona.name} onChange={(e) => updatePersona("name", e.target.value)} /><AutoTextarea className="sub-input" value={result.persona.tagline} aria-label="Persona tagline" onChange={(e) => updatePersona("tagline", e.target.value)} /><textarea className="quote" value={result.persona.quote} onChange={(e) => updatePersona("quote", e.target.value)} /><div className="columns"><div><b>Goals</b><EditableList items={result.persona.goals} onChange={(v) => updatePersona("goals", v)} /></div><div><b>Pain points</b><EditableList items={result.persona.painPoints} onChange={(v) => updatePersona("painPoints", v)} /></div></div></article><article className={regenSection === "hmw" ? "card black regenerating" : "card black"}><div className="card-head"><label>HOW MIGHT WE · EDITABLE</label><RegenButton section="hmw" label="How Might We" loading={regenSection === "hmw"} busy={regenSection !== null} dark onClick={regenerate} /></div>{regenError.hmw && <p className="error error-dark">{regenError.hmw}</p>}<textarea value={result.hmw} onChange={(e) => setResult({ ...result, hmw: e.target.value })} /><p>Review this question before accepting it.</p></article></div><article className={regenSection === "empathyMap" ? "card regenerating" : "card"}><div className="card-head"><label>EMPATHY MAP · EDITABLE</label><RegenButton section="empathyMap" label="Empathy Map" loading={regenSection === "empathyMap"} busy={regenSection !== null} onClick={regenerate} /></div><h3>Understanding the user</h3>{regenError.empathyMap && <p className="error">{regenError.empathyMap}</p>}<div className="map">{Object.entries(LABELS).map(([key, label]) => <div key={key}><b>{label}</b><EditableList items={result.empathyMap[key]} onChange={(v) => updateEmpathy(key, v)} /></div>)}</div></article><article className={regenSection === "bom" ? "card regenerating" : "card"}><div className="card-head"><label>MVP BILL OF MATERIALS · EDITABLE</label><RegenButton section="bom" label="MVP Bill of Materials" loading={regenSection === "bom"} busy={regenSection !== null} onClick={regenerate} /></div><h3>Prioritized feature list</h3>{regenError.bom && <p className="error">{regenError.bom}</p>}<div className="bom">{result.bom.map((item, index) => <div className="bom-row" key={index}><span className="bom-num">{index + 1}</span><label className="bom-field"><span className="bom-label">Feature</span><AutoTextarea value={item.feature} aria-label={`Feature ${index + 1}`} onChange={(e) => updateBom(index, "feature", e.target.value)} /></label><label className="bom-field bom-priority"><span className="bom-label">Priority</span><select value={item.priority} aria-label={`Priority ${index + 1}`} onChange={(e) => updateBom(index, "priority", e.target.value)}><option>Must</option><option>Should</option><option>Could</option></select></label><label className="bom-field"><span className="bom-label">Note</span><AutoTextarea value={item.note} aria-label={`Note ${index + 1}`} onChange={(e) => updateBom(index, "note", e.target.value)} /></label></div>)}</div></article><article className="card"><label>VALIDATION NOTES</label><h3>What would you verify with real students?</h3><p className="help">AI output is a draft. Note one assumption you would check through interviews or observation.</p><textarea className="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Example: I would ask three students whether this pain point is real." /></article>
@@ -747,8 +754,84 @@ export default function App() {
       )}
     </div><style>{`
 *{box-sizing:border-box}
-body{margin:0;background:#f5f5f2;color:#1a1a1a;font-family:Arial,Helvetica,sans-serif}
+body{margin:0;background:#f5f5f2;color:#1a1a1a;font-family:Arial,Helvetica,sans-serif;transition:background .2s,color .2s}
 #root{width:100%;max-width:100%;margin:0;border-inline:0;text-align:left;color:#1a1a1a;background:#f5f5f2}
+
+/* ===== DARK MODE ===== */
+body.dark{background:#000;color:#e8e8e8}
+body.dark #root{background:#000;color:#e8e8e8}
+body.dark .top{border-bottom-color:#222}
+body.dark .brand{color:#fff}
+body.dark .brand span{background:#fff;color:#000}
+body.dark .top p{color:#888}
+body.dark .top small{border-color:#333;color:#aaa}
+body.dark .eyebrow{color:#888}
+body.dark label{color:#aaa}
+body.dark .hero h1{color:#fff}
+body.dark .hero>p:last-child{color:#aaa}
+body.dark .form-card,.dark .card,.dark .input-summary{background:#0a0a0a;border-color:#222}
+body.dark .heading h2,.dark .result-heading h2{color:#fff}
+body.dark .heading em{color:#888}
+body.dark .examples button,.dark .actions button{background:#0a0a0a;color:#e8e8e8;border-color:#333}
+body.dark .examples button:hover,.dark .actions button:hover{border-color:#fff;background:#111}
+body.dark .fields label{color:#ccc}
+body.dark .fields textarea{background:#0a0a0a;border-color:#333;color:#e8e8e8}
+body.dark .fields textarea::placeholder,body.dark textarea::placeholder,body.dark input::placeholder{color:#555}
+body.dark .generate{background:#fff;color:#000}
+body.dark .generate:hover{background:#e0e0e0}
+body.dark .result-heading p{color:#888}
+body.dark .input-summary b{color:#888}
+body.dark .input-summary span{color:#ccc}
+body.dark .card h3{color:#fff}
+body.dark .card>label{color:#888}
+body.dark .card-head>label{color:#888}
+body.dark .regen{background:#0a0a0a;color:#e8e8e8;border-color:#333}
+body.dark .regen:hover:not(:disabled){border-color:#fff;background:#111}
+body.dark .title-input,.dark .sub-input,.dark .quote,.dark .notes,.dark .edit-row textarea,.dark .bom-field textarea,.dark .bom-field select{background:#0a0a0a;border-color:#333;color:#e8e8e8}
+body.dark .sub-input{color:#bbb}
+body.dark .columns b{color:#ccc}
+body.dark .edit-row .remove{background:#0a0a0a;border-color:#333;color:#aaa}
+body.dark .add{border-color:#444;color:#aaa}
+body.dark .add:hover{border-color:#fff;color:#fff}
+body.dark .map{background:#222;border-color:#222}
+body.dark .map>div{background:#0a0a0a}
+body.dark .map b{color:#ccc}
+body.dark .bom{border-top-color:#222}
+body.dark .bom-row{border-bottom-color:#1a1a1a}
+body.dark .bom-num{color:#888}
+body.dark .bom-label{color:#777}
+body.dark .help{color:#888}
+body.dark .help.ok{color:#4caf7d}
+body.dark footer{border-top-color:#222;color:#555}
+body.dark .e2mvp-sub{border-top-color:#1a1a1a}
+body.dark .e2mvp-sub h4{color:#fff}
+body.dark .count{background:#1a1a1a;color:#888}
+body.dark .mini-label{color:#666}
+body.dark .assume{background:#050505;border-color:#1e1e1e}
+body.dark .status-select{background-color:#0a0a0a;border-color:#333;color:#e8e8e8}
+body.dark .status-select.status-untested{background-color:#111;color:#aaa;border-color:#333}
+body.dark .status-select.status-testing{background-color:#1a1200;color:#e0a040;border-color:#5a3a00}
+body.dark .status-select.status-validated{background-color:#001a0a;color:#4caf7d;border-color:#1a5c35}
+body.dark .status-legend{color:#888}
+body.dark .evi{background:#050505;border-color:#1e1e1e}
+body.dark .evi select,.dark .evi input[type=date]{background:#0a0a0a;border-color:#333;color:#e8e8e8}
+body.dark .mvp-rec{border-top-color:#1a1a1a}
+body.dark .mvp-row{border-bottom-color:#1a1a1a}
+body.dark .mvp-num{color:#555}
+body.dark .mvp-line{color:#aaa}
+body.dark .mvp-line .mini-label{color:#555}
+body.dark .mvp-reco{background:#050505;border-color:#1e1e1e}
+body.dark .mvp-reco.provisional{background:#0d0800;border-color:#3a2800}
+body.dark .mvp-reco p{color:#bbb}
+body.dark .error-quota{background:#1a0d00;border-color:#5a3a00;color:#e0a040}
+body.dark .black{background:#000;border-color:#333}
+body.dark .black textarea{background:#0a0a0a}
+
+.top-right{display:flex;align-items:center;gap:10px}
+.theme-toggle{background:none;border:1px solid #a9a9a2;border-radius:20px;padding:6px 12px;font-size:12px;font-weight:600;cursor:pointer;color:#333;transition:border-color .15s,background .15s}
+.theme-toggle:hover{border-color:#111;background:#f4f4f1}
+body.dark .theme-toggle{border-color:#444;color:#ccc}
+body.dark .theme-toggle:hover{border-color:#fff;background:#111}
 .page{min-height:100vh;text-align:left}
 .container{max-width:980px;margin:auto;padding:24px 28px 60px}
 
